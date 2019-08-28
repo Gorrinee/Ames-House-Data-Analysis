@@ -19,11 +19,15 @@ In the end, we concluded which particular neighborhoods had higher or lower pric
 ## Screenshots
 
 ![Example screenshot](example.png)
+
 _Example of over- and underestimation of house prices_
 
 ## Code Examples
-Show examples of usage:
-`put-your-code-here`
+Looking for outliers in the dataset:
+  `cooksd <- cooks.distance(mod)
+  plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance") + # plot cook's distance 
+  abline(h = 4*mean(cooksd, na.rm=T), col="red") + # add cutoff line
+  text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")`
 
 ## Status
 Project is: _finished_
