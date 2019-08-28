@@ -3,6 +3,7 @@
 
 ## Table of contents
 * [General info](#general-info)
+* [Research Question](#research-question)
 * [Screenshots](#screenshots)
 * [Code Examples](#code-examples)
 * [Status](#status)
@@ -14,7 +15,7 @@ The project on house sale price in Ames included several steps and mainly focuse
 First of all, we analyzed the data given, to indicate any outliers, to spot any particular correlation, and check assumptions for the linear regression model. Secondly, we plotted the best fit line to look at the significance of each numerical variable related to size, as size factors appear to be dominating in affecting the sale price. Thirdly, we looked at how significant is each categorical feature after adjusting for the size effect. Then, we saw if there was any statistically significant difference across neighborhoods, as it would help us answer our main research question: which neighborhoods are overpriced or underpriced. We also conducted a clustering analysis to see what are the main factors for houses groups. 
 In the end, we concluded which particular neighborhoods had higher or lower prices than expected.
 
-**Research Question:** 
+## Research Question
 Given all background, we wanted to investigate what features of the house affect its sales price and try to spot particular neighborhoods in Ames with underpriced and overpriced houses.
 
 ## Screenshots
