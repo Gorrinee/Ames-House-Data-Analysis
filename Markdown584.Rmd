@@ -1,0 +1,343 @@
+---
+title: "ProjectMarkdown"
+output: html_document
+---
+
+```{r Q1}
+library(tidyverse)
+library(modelr)
+library(hexbin)
+data <- read_csv("train.csv")
+colnames(data)[colnames(data)=="1stFlrSF"] <- "FirstFlrSF"
+colnames(data)[colnames(data)=="2ndFlrSF"] <- "SecFlrSF"
+problems(data)
+
+data <- data %>% filter(!is.na(LotFrontage), !is.na(LotArea), !is.na(BsmtFinSF1), !is.na(BsmtFinSF2), !is.na(BsmtUnfSF), !is.na(FirstFlrSF), !is.na(SecFlrSF), !is.na(LowQualFinSF), !is.na(GrLivArea), !is.na(GarageArea), !is.na(WoodDeckSF), !is.na(OpenPorchSF), !is.na(EnclosedPorch), !is.na(PoolArea))
+
+coef(mod <- lm(log(SalePrice) ~ LotFrontage + LotArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF +
+SecFlrSF + LowQualFinSF + GarageArea + WoodDeckSF + OpenPorchSF +
+EnclosedPorch + PoolArea, data = data_wo_out))
+
+coef(mod_sign <- lm(log(SalePrice) ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  + WoodDeckSF + EnclosedPorch, data = data))
+
+#outliers
+cooksd <- cooks.distance(mod)
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance") + # plot cook's distance 
+abline(h = 4*mean(cooksd, na.rm=T), col="red") + # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+
+#head for ouliers
+influential <- as.numeric(names(cooksd)[(cooksd > 4*mean(cooksd, na.rm=T))])  # influential row numbers
+head(data[influential, ])
+
+data_wo_out <- data[-c(1070, 261, 435), ]
+
+coef(mod <- lm(log(SalePrice) ~ LotFrontage + LotArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF +
+SecFlrSF + LowQualFinSF + GarageArea + WoodDeckSF + OpenPorchSF +
+EnclosedPorch + PoolArea, data = data_wo_out))
+
+coef(mod_sign <- lm(log(SalePrice) ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  + WoodDeckSF + EnclosedPorch, data = data_wo_out))
+
+data_cont <- data_wo_out %>% select(LotFrontage, LotArea, BsmtFinSF1, BsmtFinSF2, BsmtUnfSF, FirstFlrSF,
+SecFlrSF,LowQualFinSF, GarageArea, WoodDeckSF, OpenPorchSF,
+EnclosedPorch, PoolArea, TotalBsmtSF, GrLivArea)
+
+data_cont_sign <- data_wo_out %>% select(BsmtFinSF1, BsmtFinSF2, BsmtUnfSF, FirstFlrSF, SecFlrSF, GarageArea, WoodDeckSF, EnclosedPorch)
+
+
+coef(mod_everything <- lm(SalePrice ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  +
+                            WoodDeckSF + EnclosedPorch + HouseStyle  + MasVnrType  + MasVnrArea    + GarageType + MiscVal +  SaleCondition + ExterQual + BsmtQual + Street + BldgType + Foundation +  ExterCond, data = data)) # +
+                          
+                           
+                        
+                            BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + HeatingQC + CentralAir +
+                            KitchenQual + Functional  + FireplaceQu + GarageFinish + GarageQual + PavedDrive,
+                          data = data))
+summary(mod_everything)
+
+#Condition1+ Exterior2nd Heating   + Electrical SaleType + Exterior1st + 
+#Exterior1st + Foundation ExterCond
+
+#predictions
+ggplot(data %>% add_predictions(mod_everything), aes(x = Neighborhood, y = SalePrice)) + geom_point(alpha = 1) + geom_point(aes(y = pred), color = 'coral', aplha = 0.1) +  theme(axis.text.x = element_text(angle = 90))
+
+summary(mod)
+summary(mod_sign)
+library(ggfortify)
+par(mfrow = c(2, 2))
+autoplot(mod, alpha = 0.5, colour = 'azure4')  
+
+
+#ouliers 
+
+
+#correlation with circles and colors
+
+col1 <- colorRampPalette(c("dodgerblue4", "white", "red4"))
+library(corrplot)
+res <- cor(data_cont_sign)
+corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45, method = c("color"), col = col1(70))
+
+#correlation matrix 
+library("PerformanceAnalytics")
+chart.Correlation(data_cont_sign, histogram=TRUE, pch=19)
+
+#heat map
+col<- colorRampPalette(c("blue", "white", "red"))(20)
+heatmap(x = res, col = col, symm = TRUE)
+
+```
+
+
+
+
+```{r Q2}
+library(dplyr)
+library(tidyverse)
+
+
+#Question 2
+
+datanum <- data %>% select(LotFrontage, LotArea, BsmtFinSF1, BsmtFinSF2, BsmtUnfSF, TotalBsmtSF, FirstFlrSF,
+                           SecFlrSF,LowQualFinSF, GrLivArea, GarageArea, WoodDeckSF, OpenPorchSF,
+                           EnclosedPorch, PoolArea)
+
+
+
+#Question 3
+datanum <- drop_na(datanum)
+#datanum_t <- t(datanum)
+
+#head(datanum_t[, 1:6])
+
+datanum_t.pca <- prcomp(datanum_t, scale = TRUE)
+datanum.pca <- prcomp(datanum, scale = TRUE)
+
+#summary(datanum_t.pca)
+summary(datanum.pca)
+names(datanum.pca)
+
+# Eigenvalues
+eig <- (datanum.pca$sdev)^2
+# Variances in percentage
+variance <- eig*100/sum(eig)
+
+# Cumulative variances for each PC in a table
+cumvar <- cumsum(variance)
+eig.datanum <- data.frame(eig = eig, variance = variance,cumvariance = cumvar)
+head(eig.datanum)
+summary(datanum.pca)
+
+#version 1 barplot for explained variance
+barplot(eig.datanum[, 2], names.arg=1:nrow(eig.datanum), 
+       main = "Variances",
+       xlab = "Principal Components",
+       ylab = "Percentage of variances",
+       col ="steelblue")
+lines(x = 1:nrow(eig.datanum), 
+      eig.datanum[, 2], 
+      type="b", pch=19, col = "red")
+
+
+#correlation for all variables for 9 PC
+var <- get_pca_var(datanum.pca)
+var
+var$coord[, 1:9]
+
+
+library(factoextra)
+
+#explained variance plot by PC
+fviz_eig(datanum.pca)
+
+#circle diagram with vectors and colors
+fviz_pca_var(datanum.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping
+             geom = c("point", "text"),
+             title = 'Clustering of Numerical Variables using PCA'
+             )
+```
+
+```{r}
+library(tidyverse)
+
+#Question 3
+data_cat <- data %>% select(ExterQual,ExterCond, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2,
+                            HeatingQC, KitchenQual, Functional, FireplaceQu, GarageFinish,
+                            GarageQual, GarageCond, PavedDrive, PoolQC, Fence, SalePrice)
+
+data_cat_significant <- data %>% select(BsmtQual, KitchenQual, GarageFinish, Fence, 
+                                        FireplaceQu, HeatingQC, BsmtExposure, SalePrice) 
+ # BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2,
+           #                 HeatingQC, KitchenQual, Functional, FireplaceQu, GarageFinish,
+         #                   GarageQual, GarageCond, PavedDrive, PoolQC, Fence, SalePrice)
+
+#data_cat <- drop_na(data_cat)
+
+coef(mod_indiv <- lm(SalePrice ~ BsmtQual + KitchenQual + GarageFinish + Fence + FireplaceQu + 
+                     HeatingQC + BsmtExposure, data = data_cat))
+
+summary(mod_indiv)
+
+
+coef(mod_cat <- lm(SalePrice ~ ExterCond  + BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + HeatingQC, data = data_cat))
+coef(mod_cat <- lm(SalePrice ~ BsmtQual + KitchenQual + ExterQual, data = data_cat))
+
+summary(mod_cat)
+
+
+#Question 3 remade 
+
+#pitting model Y ~ size 
+coef(mod_sign <- lm(log(SalePrice) ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  + WoodDeckSF + EnclosedPorch, data = data_wo_out))
+summary(mod_sign)
+
+
+#model with categorical, Y ~ size + categorical 
+coef(mod_sign_wcat <- lm(log(SalePrice) ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  + WoodDeckSF + EnclosedPorch + BsmtQual, data = data_wo_out))
+summary(mod_sign_wcat)
+library(car)
+#mod_sign_wcat_manova <- manova(log(SalePrice) ~ BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + FirstFlrSF + SecFlrSF + GarageArea  + WoodDeckSF + EnclosedPorch + ExterCond, data = data_wo_out)
+Anova(mod_sign_wcat, type = 3)
+
+```
+
+
+```{r}
+
+data_uncat <- data_wo_out %>% select(MSSubClass, MSZoning, Condition1, Condition2, Street,
+                              Neighborhood, BldgType, HouseStyle, RoofStyle, RoofMatl, Exterior1st, Exterior2nd,
+                              MasVnrType, MasVnrArea, Foundation, Heating, Electrical, GarageType,
+                              MiscFeature,MiscVal, SaleType, SaleCondition, Utilities, SalePrice)
+
+#mcoef(mod_indiv <- lm(SalePrice ~ Utilities, data = data))
+#summary(mod_indiv)
+
+#count of sample size in neighborhoods
+sample_sizes <- data %>% group_by(Neighborhood) %>% summarise(count = n())
+
+NoRidge
+StoneBr
+NridgHt
+
+#most significant Neighborhoods 
+coef(most_sig_neigh <- lm(SalePrice ~ Neighborhood, data = data ))
+summary(most_sig_neigh)
+
+#Question 5
+
+data_uncat_q5 <- data %>% select(Id, Condition1, Condition2, Street, BldgType, HouseStyle, 
+                                BldgType, HouseStyle, 
+                                 RoofStyle, RoofMatl,
+                                Exterior1st, Exterior2nd,
+                                 MasVnrType, Foundation, Heating, Electrical, GarageType,
+                                 MiscFeature,MiscVal, SaleType, SaleCondition, Utilities)
+
+
+data_one_neighborhood <- data %>% filter(Neighborhood == "NridgHt")
+data_one_neighborhood_q5 <- data_one_neighborhood %>% select(Id, Condition1, Condition2, Street, BldgType, HouseStyle, 
+                                BldgType, HouseStyle, 
+                                 RoofStyle, RoofMatl,
+                                Exterior1st, Exterior2nd,
+                                 MasVnrType, Foundation, Heating, Electrical, GarageType,
+                                 MiscFeature,MiscVal, SaleType, SaleCondition, Utilities)
+
+#data_uncat_q5 <- drop_na(data_uncat_q5)
+
+#data_t <- t(data_uncat_q5)
+
+distmat <- dist(data_one_neighborhood_q5, method = 'euclidean')
+
+fit.comp2 <- hclust(distmat, method = "average")
+plot(fit.comp2)
+
+fit.comp3 <- hclust(distmat, method = "ward.D2")
+plot(fit.comp3, main = 'Cluster Dendogram for NridgHt')
+
+
+hcd <- as.dendrogram(fit.comp3)
+plot(hcd)
+
+plot(hcd, xlim = c(1175, 1200), ylim = c(1, 1000))
+
+#heatmap(as.matrix(data_cont), Colv = fit.comp2)
+
+        
+hclust2 <- function(d){hclust(d, method='ward.D2')}
+heatmap(as.matrix(data_cont), hclust = hclust2, col=cm.colors(256), scale = 'column')
+
+
+#7 slide of the presentation 
+simmat <- cor(data_cont)
+distmat <- as.dist(1-simmat)
+fit.comp <- hclust(distmat, method = "average")
+plot(fit.comp)
+
+simmat <- cor(data_cont)
+distmat <- as.dist(1-simmat)
+fit.comp <- hclust(distmat, method = "ward.D2")
+plot(fit.comp)
+
+simmat <- cor(data_cont)
+distmat <- as.dist(1-simmat)
+fit.comp <- hclust(distmat, method = "complete")
+plot(fit.comp)
+
+heatmap(as.matrix(, hclust = hclust, col=cm.colors(256), scale = 'none'))
+  
+
+heatmap(da, scale = 'none') #, col = cm.colors(140), scale = "column")
+
+library("ggplot2")
+library("ggdendro")
+library("reshape2")
+library("grid")
+melted <- melt(data_uncat_q5, id.var = 'Id')
+print(melted)
+(ggplot(data = melted, aes(variable, scale_x_continuous(Id))) +
+  geom_tile(aes(fill = value)) +
+  scale_fill_gradient2() +
+  theme(axis.text.y = element_text(size = 6)))
+
+ggplot(melted, aes(Id, SaleType)) + geom_tile(aes(fill = value),
+   colour = "white") + scale_fill_manual(values=c("red", "blue", "black"))
+
+```
+
+```{r}
+#Question 4 Box Plots
+library(tidyverse)
+
+data %>% ggplot(aes(Neighborhood, SalePrice)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90))
+
+data_wo_out %>% ggplot(aes(Neighborhood, SalePrice)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90))
+
+
+```
+
+
+
+
+
+
+```{r}
+
+means_data <- data %>% group_by(Neighborhood) %>% summarise(AvgLot = mean(LotArea), AvgGr = mean(GrLivArea), SalePrice = mean(SalePrice))
+means_blmngtn <- means_data[,1:2]
+means_blueste <- means_data[,c(1,3)]
+
+
+#unique(data$Neighborhood)
+
+
+fit <- manova(cbind(LotFrontage, LotArea, BsmtFinSF1, BsmtFinSF2, BsmtUnfSF, FirstFlrSF, 
+                    SecFlrSF,LowQualFinSF, GarageArea, WoodDeckSF, OpenPorchSF,
+                    EnclosedPorch, PoolArea, SalePrice) ~ Neighborhood, data = data)
+
+summary.aov(fit)
+summary(fit, test = "Wilks")
+```
+
